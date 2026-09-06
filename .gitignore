@@ -1,0 +1,15 @@
+# Training datasets and generated splits
+Vehicle Image Classification/Vehicles/
+vehicles_split/
+
+# Python cache and local tooling files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Local environment and secrets
+.venv/
+venv/
+env/
+.env
