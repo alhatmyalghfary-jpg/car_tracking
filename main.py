@@ -2,13 +2,31 @@ import numpy as np
 import streamlit as st
 import tensorflow as tf
 from PIL import Image
+from tensorflow.keras.applications import VGG16
+from tensorflow.keras.layers import Dense, Dropout, Flatten
+from tensorflow.keras.models import Sequential
 
 from xai import find_last_conv_layer, make_gradcam_heatmap, overlay_heatmap
 
 
 @st.cache_resource
 def load_classifier():
-    model = tf.keras.models.load_model("vehicle_model.keras", compile=False)
+    base_model = VGG16(
+        weights=None,
+        include_top=False,
+        input_shape=(150, 150, 3),
+    )
+    model = Sequential(
+        [
+            base_model,
+            Flatten(),
+            Dense(512, activation="relu"),
+            Dropout(0.5),
+            Dense(3, activation="softmax"),
+        ]
+    )
+    model.build((None, 150, 150, 3))
+    model.load_weights("vehicle_classifier.h5")
     return model, find_last_conv_layer(model)
 
 
