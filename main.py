@@ -27,6 +27,7 @@ def load_classifier():
     )
     model.build((None, 150, 150, 3))
     model.load_weights("vehicle_classifier.h5")
+    model(tf.keras.Input(shape=(150, 150, 3)))
     return model, find_last_conv_layer(model)
 
 
