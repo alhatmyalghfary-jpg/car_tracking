@@ -41,7 +41,7 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
-    st.image(image, caption="الصورة التي تم رفعها", use_container_width=True)
+    st.image(image, caption="الصورة التي تم رفعها")
 
     img_resized = image.resize((150, 150))
     img_array = np.expand_dims(np.asarray(img_resized, dtype=np.float32) / 255.0, axis=0)
@@ -53,7 +53,6 @@ if uploaded_file is not None:
     st.image(
         overlay_heatmap(image, heatmap),
         caption=f"خريطة Grad-CAM - الطبقة: {last_conv_layer.name}",
-        use_container_width=True,
     )
 
     if confidence < 0.9:
