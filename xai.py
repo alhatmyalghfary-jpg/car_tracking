@@ -18,9 +18,24 @@ def find_last_conv_layer(model):
 
 def make_gradcam_heatmap(image_batch, model, last_conv_layer, class_index=None):
     """Generate a normalized Grad-CAM heatmap for one image batch."""
+    base_model = next(
+        (layer for layer in model.layers if isinstance(layer, tf.keras.Model)),
+        None,
+    )
+    if base_model is None:
+        raise ValueError("لم يتم العثور على نموذج VGG16 داخل النموذج")
+
+    conv_layer_index = base_model.layers.index(last_conv_layer)
+    prediction_tensor = last_conv_layer.output
+    for layer in base_model.layers[conv_layer_index + 1:]:
+        prediction_tensor = layer(prediction_tensor)
+    base_model_index = model.layers.index(base_model)
+    for layer in model.layers[base_model_index + 1:]:
+        prediction_tensor = layer(prediction_tensor)
+
     gradient_model = tf.keras.models.Model(
-        inputs=model.inputs,
-        outputs=[last_conv_layer.output, model.output],
+        inputs=base_model.input,
+        outputs=[last_conv_layer.output, prediction_tensor],
     )
 
     with tf.GradientTape() as tape:
