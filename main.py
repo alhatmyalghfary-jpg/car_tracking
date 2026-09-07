@@ -8,7 +8,7 @@ from xai import find_last_conv_layer, make_gradcam_heatmap, overlay_heatmap
 
 @st.cache_resource
 def load_classifier():
-    model = tf.keras.models.load_model("vehicle_classifier.h5", compile=False)
+    model = tf.keras.models.load_model("vehicle_model.keras", compile=False)
     return model, find_last_conv_layer(model)
 
 
