@@ -4,30 +4,26 @@ import tensorflow as tf
 from PIL import Image
 from tensorflow.keras.applications import VGG16
 from tensorflow.keras.layers import Dense, Dropout, Flatten
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import Model
 
 from xai import find_last_conv_layer, make_gradcam_heatmap, overlay_heatmap
 
 
 @st.cache_resource
 def load_classifier():
+    inputs = tf.keras.Input(shape=(150, 150, 3))
     base_model = VGG16(
         weights=None,
         include_top=False,
         input_shape=(150, 150, 3),
     )
-    model = Sequential(
-        [
-            base_model,
-            Flatten(),
-            Dense(512, activation="relu"),
-            Dropout(0.5),
-            Dense(3, activation="softmax"),
-        ]
-    )
-    model.build((None, 150, 150, 3))
+    features = base_model(inputs)
+    x = Flatten()(features)
+    x = Dense(512, activation="relu")(x)
+    x = Dropout(0.5)(x)
+    outputs = Dense(3, activation="softmax")(x)
+    model = Model(inputs, outputs)
     model.load_weights("vehicle_classifier.h5")
-    model(tf.keras.Input(shape=(150, 150, 3)))
     return model, find_last_conv_layer(model)
 
 
