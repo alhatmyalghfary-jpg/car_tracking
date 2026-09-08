@@ -47,13 +47,30 @@ if uploaded_file is not None:
     confidence = float(predictions[0, pred_index])
 
     heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer, pred_index)
+    predicted_category = categories[pred_index]
+
+    st.subheader("تفسير قرار النموذج (XAI)")
+    st.write(
+        f"اختار النموذج فئة **{predicted_category}** لأنها حصلت على أعلى احتمال "
+        f"({confidence * 100:.2f}%) بين الفئات المتاحة."
+    )
+    st.write("مقارنة احتمالات الفئات:")
+    for category, probability in zip(categories, predictions[0]):
+        st.write(f"- **{category}**: {float(probability) * 100:.2f}%")
+
     st.image(
         overlay_heatmap(image, heatmap),
         caption=f"خريطة Grad-CAM - الطبقة: {last_conv_layer.name}",
     )
+    st.info(
+        "تفسير الخريطة: المناطق الحمراء والصفراء هي الأكثر تأثيرًا في اختيار "
+        f"فئة {predicted_category}، بينما المناطق الزرقاء كان تأثيرها أقل. "
+        "هذه الخريطة تشرح تركيز النموذج ولا تعني أن كل منطقة حمراء هي جزء محدد "
+        "من المركبة."
+    )
 
     if confidence < 0.9:
-        st.write("الفئة: غير معروفة")
+        st.warning("الثقة أقل من 90%؛ لذلك اعتُبرت الفئة غير معروفة.")
     else:
-        st.write(f"الفئة المتوقعة: {categories[pred_index]}")
+        st.success(f"الفئة المتوقعة: {predicted_category}")
         st.write(f"درجة الثقة: {confidence * 100:.2f}%")
