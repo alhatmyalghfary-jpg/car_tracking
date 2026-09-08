@@ -94,6 +94,22 @@ if uploaded_file is not None:
             key=lambda item: float(item[1]),
             reverse=True,
         )
+        second_category, second_probability = ranked_predictions[1]
+        probability_margin = confidence - float(second_probability)
+        active_area = float(np.mean(heatmap >= 0.6)) * 100
+
+        st.write(
+            f"**السبب الرئيسي:** حصلت فئة **{predicted_category}** على أعلى احتمال "
+            f"({confidence * 100:.2f}%)، متقدمة على فئة **{second_category}** "
+            f"({float(second_probability) * 100:.2f}%) بفارق "
+            f"{probability_margin * 100:.2f} نقطة مئوية."
+        )
+        st.write(
+            f"**تركيز النموذج:** أبرزت الخريطة الحرارية مناطق مؤثرة تغطي تقريبًا "
+            f"{active_area:.1f}% من الصورة. لذلك تُظهر الصورة المدمجة أين ركّز "
+            "النموذج عند مقارنة شكل المركبة وخصائصها البصرية بالفئات الأخرى."
+        )
+
         for rank, (category, probability) in enumerate(ranked_predictions, start=1):
             probability_value = float(probability)
             st.write(f"{rank}. **{category}**: {probability_value * 100:.2f}%")
@@ -103,5 +119,7 @@ if uploaded_file is not None:
             f"الخريطة ناتجة عن طبقة **{last_conv_layer.name}** باستخدام Grad-CAM. "
             "الأحمر والأصفر يمثلان مناطق ذات تأثير أكبر على اختيار الصنف، "
             "والأزرق يمثل تأثيرًا أقل. هذه المناطق توضّح تركيز النموذج، "
-            "وليست دليلًا قطعيًا على أن النموذج تعرّف على جزء محدد من المركبة."
+            "وليست دليلًا قطعيًا على أن النموذج تعرّف على جزء محدد من المركبة. "
+            "كلما كان الفارق بين الاحتمالين الأول والثاني أكبر، كان القرار أكثر "
+            "تمييزًا وفقًا للنموذج، وليس بالضرورة أكثر صحة في كل حالة."
         )
