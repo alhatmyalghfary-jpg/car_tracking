@@ -9,6 +9,7 @@ from tensorflow.keras.models import Model
 from xai import (
     find_last_conv_layer,
     heatmap_to_image,
+    highlight_influential_regions,
     make_gradcam_heatmap,
     overlay_heatmap,
 )
@@ -65,6 +66,7 @@ if uploaded_file is not None:
         heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer, pred_index)
         heatmap_image = heatmap_to_image(heatmap, image.size)
         overlay_image = overlay_heatmap(image, heatmap)
+        highlighted_image, influential_regions = highlight_influential_regions(image, heatmap)
 
         st.subheader("تفسير قرار النموذج بالصورة الحرارية")
         st.write(
@@ -73,8 +75,8 @@ if uploaded_file is not None:
             "النموذج عند اتخاذ القرار."
         )
 
-        st.markdown("#### صور التفسير الحراري")
-        image_columns = st.columns(3)
+        st.markdown("#### صور التفسير الحراري وتحديد المناطق المؤثرة")
+        image_columns = st.columns(4)
         with image_columns[0]:
             st.image(image, caption="1. الصورة المختبرة")
         with image_columns[1]:
@@ -86,6 +88,11 @@ if uploaded_file is not None:
             st.image(
                 overlay_image,
                 caption="3. الصورة مع التفسير",
+            )
+        with image_columns[3]:
+            st.image(
+                highlighted_image,
+                caption="4. المناطق المؤثرة بالأرقام",
             )
 
         st.markdown("#### كيف تم اختيار الصنف؟")
@@ -109,6 +116,20 @@ if uploaded_file is not None:
             f"{active_area:.1f}% من الصورة. لذلك تُظهر الصورة المدمجة أين ركّز "
             "النموذج عند مقارنة شكل المركبة وخصائصها البصرية بالفئات الأخرى."
         )
+        st.write("**المناطق التي ساعدت في القرار:**")
+        if influential_regions:
+            for region in influential_regions:
+                st.write(
+                    f"المنطقة {region['number']}: من اليسار {region['left']} إلى "
+                    f"{region['right']}، ومن الأعلى {region['top']} إلى "
+                    f"{region['bottom']} بكسل. هذه المنطقة كانت ضمن أعلى مناطق "
+                    "تنشيط الخريطة وساهمت في ترجيح الصنف."
+                )
+        else:
+            st.write(
+                "لم تظهر منطقة مركزة بدرجة كافية؛ لذلك يجب التعامل مع التصنيف "
+                "بحذر والاعتماد على درجة الثقة."
+            )
 
         for rank, (category, probability) in enumerate(ranked_predictions, start=1):
             probability_value = float(probability)

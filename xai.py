@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 from PIL import Image
 import matplotlib.cm as cm
+from PIL import ImageDraw
 
 
 def find_last_conv_layer(model):
@@ -61,6 +62,58 @@ def heatmap_to_image(heatmap, size):
     heatmap_image = Image.fromarray(heatmap_array).resize(size)
     heatmap_color = np.uint8(cm.jet(np.asarray(heatmap_image))[:, :, :3] * 255)
     return Image.fromarray(heatmap_color).convert("RGB")
+
+
+def highlight_influential_regions(image, heatmap, threshold=0.65):
+    """Draw boxes around the main high-activation Grad-CAM regions."""
+    mask = heatmap >= threshold
+    height, width = mask.shape
+    visited = np.zeros_like(mask, dtype=bool)
+    regions = []
+
+    for row in range(height):
+        for column in range(width):
+            if not mask[row, column] or visited[row, column]:
+                continue
+            stack = [(row, column)]
+            visited[row, column] = True
+            pixels = []
+            while stack:
+                current_row, current_column = stack.pop()
+                pixels.append((current_row, current_column))
+                for next_row, next_column in (
+                    (current_row - 1, current_column),
+                    (current_row + 1, current_column),
+                    (current_row, current_column - 1),
+                    (current_row, current_column + 1),
+                ):
+                    if (
+                        0 <= next_row < height
+                        and 0 <= next_column < width
+                        and mask[next_row, next_column]
+                        and not visited[next_row, next_column]
+                    ):
+                        visited[next_row, next_column] = True
+                        stack.append((next_row, next_column))
+            if len(pixels) >= max(4, int(height * width * 0.01)):
+                rows, columns = zip(*pixels)
+                regions.append((len(pixels), min(columns), min(rows), max(columns), max(rows)))
+
+    regions.sort(reverse=True)
+    selected_regions = regions[:3]
+    highlighted = image.convert("RGB").resize(image.size).copy()
+    draw = ImageDraw.Draw(highlighted)
+    image_width, image_height = image.size
+    descriptions = []
+    for index, (_, left, top, right, bottom) in enumerate(selected_regions, start=1):
+        left = int(left * image_width / width)
+        right = int((right + 1) * image_width / width)
+        top = int(top * image_height / height)
+        bottom = int((bottom + 1) * image_height / height)
+        draw.rectangle((left, top, right, bottom), outline="red", width=5)
+        draw.text((left + 6, top + 6), f"{index}", fill="red", stroke_width=2, stroke_fill="white")
+        descriptions.append({"number": index, "left": left, "top": top, "right": right, "bottom": bottom})
+    return highlighted, descriptions
 
 
 def overlay_heatmap(image, heatmap, opacity=0.4):
