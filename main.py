@@ -6,7 +6,12 @@ from tensorflow.keras.applications import VGG16
 from tensorflow.keras.layers import Dense, Dropout, Flatten
 from tensorflow.keras.models import Model
 
-from xai import find_last_conv_layer, make_gradcam_heatmap, overlay_heatmap
+from xai import (
+    find_last_conv_layer,
+    heatmap_to_image,
+    make_gradcam_heatmap,
+    overlay_heatmap,
+)
 
 
 @st.cache_resource
@@ -58,23 +63,45 @@ if uploaded_file is not None:
 
     if show_explanation:
         heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer, pred_index)
+        heatmap_image = heatmap_to_image(heatmap, image.size)
+        overlay_image = overlay_heatmap(image, heatmap)
 
-        st.subheader("تفسير قرار النموذج")
+        st.subheader("تفسير قرار النموذج بالصورة الحرارية")
         st.write(
             f"اختار النموذج فئة **{predicted_category}** لأنها حصلت على أعلى احتمال "
-            f"({confidence * 100:.2f}%) بين الفئات المتاحة."
+            f"({confidence * 100:.2f}%). الصور التالية توضح المناطق التي ركّز عليها "
+            "النموذج عند اتخاذ القرار."
         )
-        st.write("مقارنة احتمالات الفئات:")
-        for category, probability in zip(categories, predictions[0]):
-            st.write(f"- **{category}**: {float(probability) * 100:.2f}%")
 
-        st.image(
-            overlay_heatmap(image, heatmap),
-            caption=f"خريطة Grad-CAM - الطبقة: {last_conv_layer.name}",
+        st.markdown("#### صور التفسير الحراري")
+        image_columns = st.columns(3)
+        with image_columns[0]:
+            st.image(image, caption="1. الصورة المختبرة")
+        with image_columns[1]:
+            st.image(
+                heatmap_image,
+                caption="2. الخريطة الحرارية",
+            )
+        with image_columns[2]:
+            st.image(
+                overlay_image,
+                caption="3. الصورة مع التفسير",
+            )
+
+        st.markdown("#### كيف تم اختيار الصنف؟")
+        ranked_predictions = sorted(
+            zip(categories, predictions[0]),
+            key=lambda item: float(item[1]),
+            reverse=True,
         )
+        for rank, (category, probability) in enumerate(ranked_predictions, start=1):
+            probability_value = float(probability)
+            st.write(f"{rank}. **{category}**: {probability_value * 100:.2f}%")
+            st.progress(probability_value)
+
         st.info(
-            "تفسير الخريطة: المناطق الحمراء والصفراء هي الأكثر تأثيرًا في اختيار "
-            f"فئة {predicted_category}، بينما المناطق الزرقاء كان تأثيرها أقل. "
-            "هذه الخريطة تشرح تركيز النموذج ولا تعني أن كل منطقة حمراء هي جزء محدد "
-            "من المركبة."
+            f"الخريطة ناتجة عن طبقة **{last_conv_layer.name}** باستخدام Grad-CAM. "
+            "الأحمر والأصفر يمثلان مناطق ذات تأثير أكبر على اختيار الصنف، "
+            "والأزرق يمثل تأثيرًا أقل. هذه المناطق توضّح تركيز النموذج، "
+            "وليست دليلًا قطعيًا على أن النموذج تعرّف على جزء محدد من المركبة."
         )

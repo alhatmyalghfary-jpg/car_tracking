@@ -55,10 +55,15 @@ def make_gradcam_heatmap(image_batch, model, last_conv_layer, class_index=None):
     return heatmap.numpy()
 
 
+def heatmap_to_image(heatmap, size):
+    """Convert a normalized Grad-CAM array into a colored PIL image."""
+    heatmap_array = np.uint8(255 * heatmap)
+    heatmap_image = Image.fromarray(heatmap_array).resize(size)
+    heatmap_color = np.uint8(cm.jet(np.asarray(heatmap_image))[:, :, :3] * 255)
+    return Image.fromarray(heatmap_color).convert("RGB")
+
+
 def overlay_heatmap(image, heatmap, opacity=0.4):
     """Overlay a colored heatmap on the original PIL image."""
-    heatmap_array = np.uint8(255 * heatmap)
-    heatmap_image = Image.fromarray(heatmap_array).resize(image.size)
-    heatmap_color = np.uint8(cm.jet(np.asarray(heatmap_image))[:, :, :3] * 255)
-    colored_heatmap = Image.fromarray(heatmap_color).convert("RGB")
+    colored_heatmap = heatmap_to_image(heatmap, image.size)
     return Image.blend(image.convert("RGB"), colored_heatmap, opacity)
